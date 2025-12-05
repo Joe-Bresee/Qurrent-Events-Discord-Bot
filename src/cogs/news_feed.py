@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -222,8 +223,6 @@ class NewsFeed(commands.Cog):
         Returns:
             Text with HTML tags removed
         """
-        import re
-
         clean = re.sub(r"<[^>]+>", "", text)
         clean = clean.replace("&nbsp;", " ")
         clean = clean.replace("&amp;", "&")
