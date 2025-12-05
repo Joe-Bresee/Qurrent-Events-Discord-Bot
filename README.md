@@ -16,6 +16,7 @@ Discord bot for sending news and sources of Quantum computing and adjacent news 
 - Numberphile
 - 3Blue1Brown
 - Minute Physics
+- Sabine Hossenfelder
 
 ### News Feeds
 - Phys.org Quantum Computing
@@ -27,7 +28,7 @@ Discord bot for sending news and sources of Quantum computing and adjacent news 
 
 ### Prerequisites
 - Python 3.10 or higher
-- A Discord bot token (create one at [Discord Developer Portal](https://discord.com/developers/applications))
+- A Discord bot token
 
 ### Installation
 
@@ -37,16 +38,23 @@ Discord bot for sending news and sources of Quantum computing and adjacent news 
    cd Qurrent-Events-Discord-Bot
    ```
 
-2. Create a virtual environment and install dependencies:
+2. Install required system packages:
    ```bash
-   python -m venv venv
+   sudo apt update
+   sudo apt install python3-venv
+   ```
+
+3. Create a virtual environment and install dependencies:
+   ```bash
+   python3 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    pip install -r requirements.txt
    ```
 
-3. Create a `.env` file from the example:
+3. Create and configure your `.env` file:
    ```bash
-   cp .env.example .env
+   # The .env file is already created for you with default values
+   # Edit it and add your configuration:
    ```
 
 4. Edit `.env` and add your configuration:
@@ -56,7 +64,11 @@ Discord bot for sending news and sources of Quantum computing and adjacent news 
 ### Running the Bot
 
 ```bash
-python -m src.bot
+# Make sure your virtual environment is activated
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Run the bot
+python run_bot.py
 ```
 
 ## Configuration
@@ -105,9 +117,10 @@ Qurrent-Events-Discord-Bot/
 │   ├── test_config.py
 │   ├── test_youtube_feed.py
 │   └── test_news_feed.py
-├── .env.example
+├── .env              # Configuration file (create from template)
 ├── .gitignore
 ├── README.md
+├── run_bot.py        # Main entry point to run the bot
 └── requirements.txt
 ```
 

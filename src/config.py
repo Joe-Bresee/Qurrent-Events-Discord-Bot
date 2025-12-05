@@ -71,6 +71,7 @@ class BotConfig:
             "UCoxcjq-8xIDTYp3uz647V5A",  # Numberphile
             "UCYO_jab_esuFRV4b17AJtAw",  # 3Blue1Brown
             "UCkLHy_jxeaHTZCfGalg6QaA",  # Minute Physics
+            "UC1yNl2E66ZzKApQdRuTQ4tw",  # Sabine Hossenfelder
         ]
 
     @staticmethod
