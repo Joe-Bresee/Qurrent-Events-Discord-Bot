@@ -12,6 +12,7 @@ from discord.ext import commands
 from src.config import BotConfig
 from src.cogs.youtube_feed import YouTubeFeed
 from src.cogs.news_feed import NewsFeed
+from src.cogs.management import ManagementCommands
 
 # Configure logging
 logging.basicConfig(
@@ -74,6 +75,9 @@ class QurrentEventsBot(commands.Bot):
 
     async def setup_hook(self) -> None:
         """Set up the bot before it connects."""
+        # Remove default help command first
+        self.remove_command('help')
+        
         # Load dynamic sources
         dynamic_sources = load_dynamic_sources()
         
@@ -103,6 +107,10 @@ class QurrentEventsBot(commands.Bot):
         )
         logger.info("News feed cog loaded")
 
+        # Add management commands cog
+        await self.add_cog(ManagementCommands(self))
+        logger.info("Management commands cog loaded")
+
     async def on_ready(self) -> None:
         """Called when the bot is ready."""
         logger.info(f"Logged in as {self.user} (ID: {self.user.id})")
@@ -126,238 +134,7 @@ class QurrentEventsBot(commands.Bot):
         logger.error(f"Command error: {error}")
 
 
-@commands.command(name="help")
-async def qhelp(ctx: commands.Context) -> None:
-    """Display help information."""
-    embed = discord.Embed(
-        title="🔮 Qurrent Events Bot",
-        description="Your source for quantum computing news and updates!",
-        color=discord.Color.purple(),
-    )
-
-    embed.add_field(
-        name="📋 Basic Commands",
-        value=(
-            "`!qhelp` - Show this help message\n"
-            "`!qyoutube` - Show YouTube monitoring status\n"
-            "`!qnews` - Show news monitoring status\n"
-            "`!qstatus` - Show overall bot status\n"
-            "`!qlist-sources` - List all monitored sources"
-        ),
-        inline=False,
-    )
-    
-    embed.add_field(
-        name="➕ Add Sources",
-        value=(
-            "`!qadd-source-youtube UC1yNl2E66ZzKApQdRuTQ4tw`\n"
-            "Add YouTube channel (use channel ID)\n\n"
-            "`!qadd-source-rss https://example.com/feed.xml`\n"
-            "Add RSS news feed"
-        ),
-        inline=False,
-    )
-
-    embed.add_field(
-        name="Features",
-        value=(
-            "• 🎬 **YouTube Notifications** - Get alerts when quantum computing "
-            "channels upload new videos\n"
-            "• 📰 **News Updates** - Receive the latest quantum computing news "
-            "from various sources"
-        ),
-        inline=False,
-    )
-
-    embed.set_footer(text="UVic Quantum Computing Discord")
-
-    await ctx.send(embed=embed)
-
-
-@commands.command(name="status")
-async def status(ctx: commands.Context) -> None:
-    """Display overall bot status."""
-    bot = ctx.bot
-
-    embed = discord.Embed(
-        title="🔮 Qurrent Events Bot Status",
-        color=discord.Color.green(),
-    )
-
-    embed.add_field(
-        name="Bot",
-        value=f"Online as {bot.user}",
-        inline=True,
-    )
-    embed.add_field(
-        name="Guilds",
-        value=str(len(bot.guilds)),
-        inline=True,
-    )
-    embed.add_field(
-        name="Latency",
-        value=f"{round(bot.latency * 1000)}ms",
-        inline=True,
-    )
-
-    # Get cog statuses
-    youtube_cog = bot.get_cog("YouTubeFeed")
-    news_cog = bot.get_cog("NewsFeed")
-
-    if youtube_cog:
-        embed.add_field(
-            name="YouTube",
-            value=f"✅ Monitoring {len(youtube_cog.channel_ids)} channels",
-            inline=True,
-        )
-
-    if news_cog:
-        embed.add_field(
-            name="News",
-            value=f"✅ Monitoring {len(news_cog.feed_urls)} feeds",
-            inline=True,
-        )
-
-    await ctx.send(embed=embed)
-
-
-@commands.command(name="add-source-youtube")
-async def add_youtube_source(ctx: commands.Context, channel_id: str) -> None:
-    """
-    Add a YouTube channel to monitor.
-    
-    Usage: !qadd-source-youtube UCxxxxxxxxxxxxx
-    """
-    bot = ctx.bot
-    
-    # Validate YouTube channel ID format
-    if not channel_id.startswith('UC') or len(channel_id) != 24:
-        await ctx.send("❌ Invalid YouTube channel ID format. Should be 24 characters starting with 'UC'")
-        return
-    
-    # Get the YouTube feed cog
-    youtube_cog = bot.get_cog("YouTubeFeed")
-    if not youtube_cog:
-        await ctx.send("❌ YouTube monitoring is not available")
-        return
-    
-    # Check if already monitoring this channel
-    if channel_id in youtube_cog.channel_ids:
-        await ctx.send(f"⚠️ Already monitoring YouTube channel: `{channel_id}`")
-        return
-    
-    # Add the channel
-    youtube_cog.channel_ids.append(channel_id)
-    
-    # Save to persistent storage
-    dynamic_sources = load_dynamic_sources()
-    if channel_id not in dynamic_sources["youtube_channels"]:
-        dynamic_sources["youtube_channels"].append(channel_id)
-        save_dynamic_sources(dynamic_sources["youtube_channels"], dynamic_sources["rss_feeds"])
-    
-    embed = discord.Embed(
-        title="✅ YouTube Channel Added",
-        description=f"Now monitoring YouTube channel: `{channel_id}`",
-        color=discord.Color.green()
-    )
-    embed.add_field(
-        name="Total Channels", 
-        value=str(len(youtube_cog.channel_ids)), 
-        inline=True
-    )
-    embed.set_footer(text="New videos from this channel will be posted here!")
-    
-    await ctx.send(embed=embed)
-    logger.info(f"Added YouTube channel {channel_id} via Discord command")
-
-
-@commands.command(name="add-source-rss")
-async def add_rss_source(ctx: commands.Context, *, feed_url: str) -> None:
-    """
-    Add an RSS feed to monitor.
-    
-    Usage: !qadd-source-rss https://example.com/feed.xml
-    """
-    bot = ctx.bot
-    
-    # Basic URL validation
-    if not feed_url.startswith(('http://', 'https://')):
-        await ctx.send("❌ Invalid RSS feed URL. Must start with http:// or https://")
-        return
-    
-    # Get the news feed cog
-    news_cog = bot.get_cog("NewsFeed")
-    if not news_cog:
-        await ctx.send("❌ News monitoring is not available")
-        return
-    
-    # Check if already monitoring this feed
-    if feed_url in news_cog.feed_urls:
-        await ctx.send(f"⚠️ Already monitoring RSS feed: `{feed_url}`")
-        return
-    
-    # Add the feed
-    news_cog.feed_urls.append(feed_url)
-    
-    # Save to persistent storage
-    dynamic_sources = load_dynamic_sources()
-    if feed_url not in dynamic_sources["rss_feeds"]:
-        dynamic_sources["rss_feeds"].append(feed_url)
-        save_dynamic_sources(dynamic_sources["youtube_channels"], dynamic_sources["rss_feeds"])
-    
-    embed = discord.Embed(
-        title="✅ RSS Feed Added",
-        description=f"Now monitoring RSS feed: `{feed_url}`",
-        color=discord.Color.blue()
-    )
-    embed.add_field(
-        name="Total Feeds", 
-        value=str(len(news_cog.feed_urls)), 
-        inline=True
-    )
-    embed.set_footer(text="Quantum-related articles from this feed will be posted here!")
-    
-    await ctx.send(embed=embed)
-    logger.info(f"Added RSS feed {feed_url} via Discord command")
-
-
-@commands.command(name="list-sources")
-async def list_sources(ctx: commands.Context) -> None:
-    """List all currently monitored sources."""
-    bot = ctx.bot
-    
-    embed = discord.Embed(
-        title="📋 Monitored Sources",
-        color=discord.Color.purple()
-    )
-    
-    # YouTube channels
-    youtube_cog = bot.get_cog("YouTubeFeed")
-    if youtube_cog:
-        youtube_list = "\n".join([f"• `{ch}`" for ch in youtube_cog.channel_ids[:10]])
-        if len(youtube_cog.channel_ids) > 10:
-            youtube_list += f"\n... and {len(youtube_cog.channel_ids) - 10} more"
-        
-        embed.add_field(
-            name=f"🎬 YouTube Channels ({len(youtube_cog.channel_ids)})",
-            value=youtube_list or "None",
-            inline=False
-        )
-    
-    # RSS feeds
-    news_cog = bot.get_cog("NewsFeed")
-    if news_cog:
-        rss_list = "\n".join([f"• {url[:50]}..." if len(url) > 50 else f"• {url}" for url in news_cog.feed_urls[:5]])
-        if len(news_cog.feed_urls) > 5:
-            rss_list += f"\n... and {len(news_cog.feed_urls) - 5} more"
-        
-        embed.add_field(
-            name=f"📰 RSS Feeds ({len(news_cog.feed_urls)})",
-            value=rss_list or "None",
-            inline=False
-        )
-    
-    await ctx.send(embed=embed)
+# Management commands are now in src/cogs/management.py
 
 
 def main() -> None:
@@ -378,13 +155,6 @@ def main() -> None:
 
     # Create and run bot
     bot = QurrentEventsBot(config)
-
-    # Add commands
-    bot.add_command(qhelp)
-    bot.add_command(status)
-    bot.add_command(add_youtube_source)
-    bot.add_command(add_rss_source)
-    bot.add_command(list_sources)
 
     logger.info("Starting Qurrent Events Bot...")
     bot.run(config.discord_token)
